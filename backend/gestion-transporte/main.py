@@ -28,6 +28,7 @@ from routers.estudiante_ruta import router as estudiante_ruta_router
 from routers.registros_abordaje import router as registros_abordaje_router
 from routers.ausencias import router as ausencias_router
 from routers.fallas_vehiculo import router as fallas_vehiculo_router
+from routers.reportes import router as reportes_router
 
 # ============================================================
 # CREACIÓN DE LA API
@@ -93,7 +94,7 @@ for router in (
     usuarios_router, acudientes_router, estudiantes_router,
     conductores_router, vehiculos_router, rutas_router, paraderos_router,
     estudiante_ruta_router, registros_abordaje_router,
-    ausencias_router, fallas_vehiculo_router,
+    ausencias_router, fallas_vehiculo_router, reportes_router,
 ):
     app.include_router(router)
 

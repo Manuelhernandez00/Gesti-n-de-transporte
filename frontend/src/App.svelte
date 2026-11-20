@@ -7,6 +7,8 @@
   import BarraSuperior from './components/BarraSuperior.svelte';
   import Inicio from './components/Inicio.svelte';
   import PaginaCrud from './components/PaginaCrud.svelte';
+  import Tablero from './components/Tablero.svelte';
+  import Reportes from './components/Reportes.svelte';
 
   let sesion = $state(sesionGuardada.leer());
   let activo = $state('inicio');
@@ -15,7 +17,13 @@
 
   // El menú sale de la base de datos (roles_modulos); aquí solo se
   // ignoran módulos que el frontend aún no sabe dibujar.
-  const modulos = $derived((sesion?.modulos ?? []).filter((m) => recursos[m.clave]));
+  // Tablero y Reportes no son CRUD, por eso se permiten aunque no estén en `recursos`.
+  const MODULOS_ESPECIALES = ['tablero', 'reportes'];
+  const modulos = $derived(
+    (sesion?.modulos ?? []).filter(
+      (m) => recursos[m.clave] || MODULOS_ESPECIALES.includes(m.clave)
+    )
+  );
   const moduloActivo = $derived(modulos.find((m) => m.clave === activo));
 
   function cerrarSesion(mensaje = '') {
@@ -78,6 +86,10 @@
       <main>
         {#if activo === 'inicio' || !moduloActivo}
           <Inicio usuario={sesion.usuario} {modulos} onIr={ir} />
+        {:else if moduloActivo.clave === 'tablero'}
+          <Tablero />
+        {:else if moduloActivo.clave === 'reportes'}
+          <Reportes />
         {:else}
           {#key moduloActivo.clave}
             <PaginaCrud modulo={moduloActivo} rol={sesion.usuario.rol} />

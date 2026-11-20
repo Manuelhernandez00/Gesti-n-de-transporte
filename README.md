@@ -1,42 +1,113 @@
-# Gestión de Transporte Escolar — estructura reorganizada
+# Gestión de Transporte Escolar (RutaEscolar)
 
-Se conservó el código funcional de la API y del frontend; únicamente se reorganizaron las carpetas para seguir el patrón `backend/<proyecto>` y `frontend/<proyecto>` del repositorio Tutorías-Taller2.
+Aplicación web y móvil para gestionar el transporte escolar: rutas, estudiantes, abordajes,
+ausencias y fallas de vehículos. Roles: **Administrador, Conductor, Acudiente y Estudiante**,
+cada uno con su propio menú y sus propios datos.
+
+## Tecnologías
+
+| Parte | Tecnología |
+|---|---|
+| Backend | Python, FastAPI, SQLAlchemy, JWT |
+| Base de datos | PostgreSQL (Neon) |
+| Frontend | Svelte 5 + Vite |
+| Móvil (APK) | Capacitor (carpeta `frontend/android`, compilación con GitHub Actions) |
+| Tablero | Power BI publicado en la web, mostrado con un `<iframe>` |
+| Reportes | PDF (jsPDF) y Excel (ExcelJS), con envío por correo (SMTP) |
 
 ## Estructura
 
-- `backend/gestion-transporte/`: API FastAPI, modelos, esquemas y routers.
-- `frontend/gestion_transporte_web/`: aplicación Svelte + Vite.
-- `render.yaml`: servicio de Render configurado con `rootDir` para la nueva ubicación.
-- `frontend/gestion_transporte_web/netlify.toml`: build de Netlify para Vite.
+```text
+gestion-transporte/
+├── backend/gestion-transporte/   API: routers/, models, auth.py, scope.py, seed.py
+├── frontend/                     Svelte + Vite (src/components, src/lib) y Capacitor (android/)
+├── .github/workflows/android.yml Compilación del APK
+├── render.yaml                   Servicio del backend en Render
+└── netlify.toml                  Build del frontend en Netlify
+```
 
-## Ejecutar localmente
+## Módulos destacados
 
-### API (Python)
+- **Tablero:** el módulo muestra el tablero de Power BI (4 indicadores, 6 gráficos y 2 filtros) con un
+  `<iframe>`. El vínculo está en `frontend/src/components/Tablero.svelte`.
+- **Reportes:** dos informes (Abordajes y Ausencias) con filtros de rango de fechas, ruta y estado/tipo.
+  No muestran IDs, unen 4 o más tablas, se visualizan en pantalla, se exportan a PDF o Excel con
+  formato (encabezado, pie, colores) y se envían por correo. El Administrador ve todo y el Conductor
+  solo sus rutas.
 
-1. Abre una terminal en `backend/gestion-transporte`.
-2. Crea y activa un entorno virtual. En Windows: `py -m venv venv` y `venv\Scripts\Activate.ps1`.
-3. Instala dependencias: `pip install -r requirements.txt`.
-4. Copia `.env.example` a `.env` y configura `DATABASE_URL`, `CORS_ORIGINS` y `JWT_SECRET`.
-5. Ejecuta: `uvicorn main:app --reload --port 8000`.
-6. Documentación: `http://127.0.0.1:8000/docs`.
+## Ejecutar localmente (Windows)
 
-### Frontend
+Requisitos: **Python 3.12 o 3.13** (versiones muy nuevas pueden no tener paquetes precompilados) y **Node.js LTS**.
 
-1. Abre otra terminal en `frontend/gestion_transporte_web`.
-2. Ejecuta `npm install`.
-3. Copia `.env.example` a `.env` y configura `VITE_API_URL=http://localhost:8000`.
-4. Ejecuta `npm run dev`.
+### 1. Backend
 
-## Publicación en Render y Netlify
+```powershell
+cd backend\gestion-transporte
+py -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env          # y completa DATABASE_URL, CORS_ORIGINS y JWT_SECRET
+python -m uvicorn main:app --reload --port 8000
+```
 
-- **Render:** el `render.yaml` declara `rootDir: backend/gestion-transporte`. Configura `DATABASE_URL` con la URL de PostgreSQL, `JWT_SECRET` como secreto largo y `CORS_ORIGINS` con la URL exacta de Netlify y los orígenes locales que necesites. Si Render ya está configurado manualmente, actualiza el Root Directory a `backend/gestion-transporte` y revisa el comando de inicio.
-- **Netlify:** establece Base directory en `frontend/gestion_transporte_web`, Build command `npm run build` y Publish directory `dist`. Define `VITE_API_URL` con la URL pública real del backend en Render (sin barra final).
-- La URL real del frontend de Netlify no se puede deducir de forma fiable del código; usa el dominio actual de tu proyecto en `CORS_ORIGINS`.
+Comprueba en `http://127.0.0.1:8000/docs`. Si `pip install -r requirements.txt` falla por `pyyaml`
+(falta un compilador de C++), instala solo lo necesario:
 
-## Importante sobre credenciales
+```powershell
+pip install fastapi uvicorn SQLAlchemy python-dotenv psycopg2-binary PyJWT
+```
 
-Los archivos `.env` reales no se incluyeron por seguridad. Configura las variables en el entorno local y en los paneles de Render/Netlify. Si las credenciales que estaban en el ZIP se subieron a GitHub o se compartieron, rota la contraseña de la base de datos y cualquier secreto JWT.
+### 2. Base de datos
 
-## Verificación
+- **Base nueva y vacía:** `python seed.py` crea tablas, roles, módulos y datos de ejemplo.
+  `python seed.py --reset` **borra** las tablas del proyecto antes: no lo uses en una base con datos.
+- **Base que ya existe:** registra los módulos nuevos sin borrar nada:
 
-El archivo `pruebas_api.py` se conservó para las pruebas existentes. La estructura se reorganizó sin renombrar los módulos Python ni los endpoints, para mantener las importaciones y rutas actuales.
+```powershell
+python agregar_tablero.py
+python agregar_reportes.py
+```
+
+Después cierra sesión y vuelve a entrar para ver el menú.
+
+### 3. Frontend
+
+```powershell
+cd frontend
+npm install
+copy .env.example .env          # VITE_API_URL=http://localhost:8000
+npm run dev
+```
+
+Abre `http://localhost:5173`. Si Vite falla al cargar una librería nueva:
+`Remove-Item -Recurse -Force node_modules\.vite` y `npm run dev -- --force`.
+
+## Variables de entorno
+
+| Variable | Dónde | Para qué |
+|---|---|---|
+| `DATABASE_URL` | Backend / Render | Conexión a PostgreSQL |
+| `CORS_ORIGINS` | Backend / Render | URL(s) del frontend permitidas |
+| `JWT_SECRET` | Backend / Render | Firma de sesiones |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Backend / Render | Envío de reportes por correo (opcional) |
+| `VITE_API_URL` | Frontend / Netlify | URL pública de la API, sin barra final |
+
+## Publicación
+
+- **Render (backend):** `render.yaml` declara `rootDir: backend/gestion-transporte`. En *Environment* configura
+  las variables de la tabla. `CORS_ORIGINS` debe incluir la URL exacta de Netlify.
+- **Netlify (frontend):** el `netlify.toml` usa `base = "frontend"`, comando `npm run build` y carpeta `dist`.
+  Define `VITE_API_URL` con la URL pública del backend en Render.
+- **APK:** el flujo `.github/workflows/android.yml` compila la app Android con Capacitor.
+
+## Seguridad
+
+- El archivo `.env` real **no se sube** al repositorio (está en `.gitignore`); `.env.example` solo lleva valores de ejemplo.
+- Si una contraseña o clave se subió o se compartió por error, cámbiala (en Neon, en Google, etc.) y actualiza
+  las variables locales y las de Render.
+- El tablero de Power BI se publica con "Publicar en la web": cualquiera con el enlace puede verlo.
+  Usa solo datos de ejemplo.
+
+## Pruebas
+
+`backend/gestion-transporte/pruebas_api.py` contiene las pruebas de la API. Úsalo con una base **local de pruebas**.

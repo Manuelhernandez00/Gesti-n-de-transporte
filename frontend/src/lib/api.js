@@ -45,5 +45,15 @@ export const api = {
   crear: (recurso, datos) => peticion(`/${recurso}/`, { method: 'POST', body: JSON.stringify(datos) }),
   actualizar: (recurso, id, datos) =>
     peticion(`/${recurso}/${id}`, { method: 'PUT', body: JSON.stringify(datos) }),
-  eliminar: (recurso, id) => peticion(`/${recurso}/${id}`, { method: 'DELETE' })
+  eliminar: (recurso, id) => peticion(`/${recurso}/${id}`, { method: 'DELETE' }),
+
+  // Reportes: datos para visualizar, opciones de filtros y envío por correo.
+  opcionesReporte: () => peticion('/reportes/opciones'),
+  reporte: (tipo, filtros = {}) => {
+    const q = new URLSearchParams();
+    for (const [clave, valor] of Object.entries(filtros)) if (valor) q.set(clave, valor);
+    return peticion(`/reportes/${tipo}?${q}`);
+  },
+  enviarReporte: (datos) =>
+    peticion('/reportes/enviar', { method: 'POST', body: JSON.stringify(datos) })
 };
